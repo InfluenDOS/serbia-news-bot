@@ -1,18 +1,16 @@
-name: Daily News Scraper
+name: Daily News Scraper with AI
 
 on:
   schedule:
-    # 每天格林威治时间 17:00 运行（对应塞尔维亚标准时间 18:00）
+    # 每天格林威治时间 17:00 (塞尔维亚 18:00)
     - cron: '0 17 * * *'
-  workflow_dispatch: # 允许你手动点击运行
+  workflow_dispatch: 
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    # --- 关键新增部分开始 ---
     permissions:
       contents: write
-    # --- 关键新增部分结束 ---
 
     steps:
     - name: Checkout code
@@ -28,6 +26,8 @@ jobs:
         pip install -r requirements.txt
 
     - name: Run scraper
+      env:
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       run: python scraper.py
 
     - name: Commit and push changes
@@ -35,5 +35,5 @@ jobs:
         git config --local user.email "github-actions[bot]@users.noreply.github.com"
         git config --local user.name "github-actions[bot]"
         git add reports/
-        git commit -m "Add today's news report" || echo "No changes to commit"
+        git commit -m "Add AI-summarized report for $(date +'%Y-%m-%d')" || echo "No changes"
         git push
