@@ -15,13 +15,12 @@ client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 MODEL_ID = 'models/gemini-flash-latest'
 
 def get_ai_summary(title, text):
-    """带自动重试逻辑的 AI 摘要生成"""
+    """带自动重试逻辑的 AI 摘要生成（支持 429 和 503 错误）"""
     if not text or len(text.strip()) < 100:
         return None
 
     prompt = f"你是一个资深的巴尔干政治分析师。请为这篇关于‘塞尔维亚反对派’的新闻写一篇400-800字的中文深度摘要。重点关注人物、动作和政治诉求。原文：标题【{title}】，正文【{text}】"
     
-    # 最大尝试次数
     max_retries = 3
     for attempt in range(max_retries):
         try:
@@ -31,9 +30,10 @@ def get_ai_summary(title, text):
             )
             return response.text if response.text else None
         except Exception as e:
-            if "429" in str(e):
-                wait_time = (attempt + 1) * 15  # 遇到限流，依次等待 15s, 30s, 45s
-                print(f"⚠️ 触发限流，{wait_time}秒后进行第 {attempt+1} 次重试...")
+            # 只要报错里包含 429（限流）或 503（服务器忙），就触发重试
+            if "429" in str(e) or "503" in str(e):
+                wait_time = (attempt + 1) * 30  # 遇到服务器忙，多等一会儿：30s, 60s, 90s
+                print(f"⚠️ 服务器繁忙(503)或触发限流(429)，{wait_time}秒后进行第 {attempt+1} 次重试...")
                 time.sleep(wait_time)
             else:
                 print(f"❌ AI 摘要失败: {e}")
