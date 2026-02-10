@@ -2,5 +2,5 @@ newspaper4k
 requests
 lxml
 lxml_html_clean
-google-generativeai
+google-genai
 beautifulsoup4
