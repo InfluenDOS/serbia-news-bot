@@ -118,14 +118,20 @@ def run_scraper():
                 print(f"📝 正在评估并摘要: {article.title}")
                 summary = get_ai_summary(article.title, article.text)
                 
-                if summary and "SKIP" not in summary.upper():
+                # --- 新增调试日志 ---
+                if not summary:
+                    print(f"❌ AI 未返回内容 (可能是 API 错误)")
+                elif "SKIP" in summary.upper():
+                    print(f"⏩ AI 判定为非硬新闻，已跳过。")
+                else:
+                    print(f"✅ AI 摘要成功，字数: {len(summary)}")
                     final_report += f"## 📰 {article.title}\n"
                     final_report += f"**来源**: {config['name']} | [原文链接]({link})\n\n"
                     final_report += f"{summary}\n\n---\n\n"
                     found_any = True
                     time.sleep(20) 
-            except:
-                continue
+            except Exception as e:
+                print(f"⚠️ 处理出错: {e}")
 
     if not found_any:
         final_report += f"今日 ({today}) 未检索到符合要求的硬新闻动态。"
