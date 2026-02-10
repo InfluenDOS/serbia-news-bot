@@ -2,50 +2,78 @@ import os
 import time
 import datetime
 import requests
+from bs4 import BeautifulSoup
+import newspaper # 正确导入整个模块
 from newspaper import Article
 import google.generativeai as genai
 
-# === 1. 配置 AI 引擎 (基于调试结果) ===
+# === 1. 配置 AI 引擎 ===
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-# 使用你调试出的最新稳定模型 ID
+# 使用你调试出的最新模型
 MODEL_ID = 'models/gemini-2.5-flash'
 ai_model = genai.GenerativeModel(MODEL_ID)
 
-# === 2. 目标网站配置 ===
-SITES = [
-    "https://n1info.rs/?s=",
-    "https://nova.rs/?s=",
-    "https://www.danas.rs/?s=",
-    "https://balkaninsight.com/?s=",
-    "https://www.slobodnaevropa.org/s?k=",
-    "https://serbiantimes.info/en/?s=",
-    "https://www.b92.net/specijal/3/english/search.php?q="
+# === 2. 目标网站配置 (严格限定你的 10 个源) ===
+SITES_CONFIG = [
+    {"name": "N1 Info", "search": "https://n1info.rs/?s=opozicija"},
+    {"name": "Nova.rs", "search": "https://nova.rs/?s=opozicija"},
+    {"name": "Danas", "search": "https://www.danas.rs/?s=opozicija"},
+    {"name": "Balkan Insight", "search": "https://balkaninsight.com/?s=serbia+opposition"},
+    {"name": "Slobodna Evropa", "search": "https://www.slobodnaevropa.org/s?k=opozicija"},
+    {"name": "B92", "search": "https://www.b92.net/specijal/3/english/search.php?q=opposition"},
+    {"name": "Vreme", "search": "https://vreme.com/?s=opozicija"},
+    {"name": "Demostat", "search": "https://demostat.rs/sr/pretraga?q=opozicija"},
+    {"name": "Serbian Times", "search": "https://serbiantimes.info/en/?s=opposition"},
+    {"name": "BBC Serbian", "search": "https://www.bbc.com/serbian/lat/search?q=opozicija"}
 ]
-KEYWORD = "opozicija" 
 
 def get_ai_summary(title, text):
-    """调用 Gemini 2.5 生成深度摘要"""
+    """调用 Gemini 生成 400-800 字深度摘要"""
     if not text or len(text.strip()) < 100:
-        return "原文内容过短，无法生成高质量摘要。"
+        return None
 
     prompt = f"""
-    你是一个深耕巴尔干半岛政治的专业分析师。请为我摘要以下关于塞尔维亚反对派的新闻。
-    
-    【文章标题】：{title}
-    【文章正文】：{text}
+    你是一个资深的巴尔干半岛政治分析师。
+    请根据以下原文，写一篇关于“塞尔维亚反对派”今日动态的深度摘要。
 
-    【摘要要求】：
-    1. 必须使用中文。
-    2. 字数在 400-800 字之间，细节要极其丰富。
-    3. 重点提炼：反对派的具体行动、具体的人物姓名、具体的时间点、政治诉求以及对执政当局的批评。
-    4. 排除广告、无关推荐信息。
-    5. 采用专业、冷静的调查记者口吻。
+    【文章标题】：{title}
+    【原文内容】：{text}
+
+    【要求】：
+    1. 必须使用中文，字数控制在 400-800 字。
+    2. 重点：反对派的具体行动、具体人物、政治诉求、对政府的具体批评。
+    3. 细节要详实，不要泛泛而谈。
+    4. 剔除一切无关的网页导航或广告信息。
     """
     try:
         response = ai_model.generate_content(prompt)
-        return response.text if response.text else "AI 未能生成内容。"
+        return response.text if response.text else None
     except Exception as e:
-        return f"AI 摘要生成失败: {str(e)}"
+        print(f"AI 摘要失败: {e}")
+        return None
+
+def extract_links(url):
+    """手动提取搜索结果中的文章链接"""
+    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
+    links = []
+    try:
+        res = requests.get(url, headers=headers, timeout=20)
+        soup = BeautifulSoup(res.text, 'html.parser')
+        
+        # 针对新闻站点的链接过滤逻辑
+        for a in soup.find_all('a', href=True):
+            href = a['href']
+            # 过滤出包含 2026/02 或具有新闻特征的路径
+            if '/2026/02/' in href or '/vesti/' in href or '/news/' in href:
+                if href.startswith('/') and 'http' not in href:
+                    # 处理相对路径
+                    base = url.split('.com')[0] + '.com' if '.com' in url else url.split('.rs')[0] + '.rs'
+                    href = base + href
+                if href not in links and 'http' in href:
+                    links.append(href)
+    except Exception as e:
+        print(f"提取链接出错: {e}")
+    return list(set(links))[:3] # 每个站取前3个最有潜力的
 
 def run_scraper():
     today = datetime.date.today()
@@ -55,57 +83,40 @@ def run_scraper():
     final_report = f"# 🇷🇸 塞尔维亚反对派动态每日深度专报\n\n**生成日期**: {today}\n\n---\n"
     found_any = False
 
-    for base_url in SITES:
-        search_url = base_url + KEYWORD
-        print(f"正在扫描: {search_url}")
+    for config in SITES_CONFIG:
+        print(f"🔍 正在扫描 {config['name']}...")
+        links = extract_links(config['search'])
         
-        try:
-            # 使用更稳健的链接抓取方式
-            from newspaper import build
-            paper = newspaper.build(search_url, language='sr', memoize_articles=False)
-            
-            # 每次搜索只取前 2 篇今天的文章，确保摘要质量和 API 稳定
-            count = 0
-            for article in paper.articles:
-                if count >= 2: break
+        for link in links:
+            try:
+                article = Article(link, language='sr')
+                article.download()
+                article.parse()
                 
-                try:
-                    article.download()
-                    article.parse()
-                    
-                    # 检查日期：如果是今天或昨天（考虑到时差）
-                    pub_date = article.publish_date
-                    is_recent = False
-                    if pub_date:
-                        is_recent = (pub_date.date() >= today - datetime.timedelta(days=1))
-                    else:
-                        # 如果抓不到日期，暂时默认抓取以供查看（或根据关键词判断）
-                        is_recent = True 
-
-                    if is_recent:
-                        print(f"✅ 正在生成摘要: {article.title}")
-                        summary = get_ai_summary(article.title, article.text)
-                        
-                        final_report += f"## 📰 {article.title}\n"
-                        final_report += f"**原文链接**: {article.url}\n\n"
-                        final_report += f"### 深度摘要\n{summary}\n\n"
-                        final_report += "---\n\n"
-                        
-                        found_any = True
-                        count += 1
-                        time.sleep(12) # 严格遵守免费版频率限制
-                except:
+                # 时间校验：如果是最近 2 天内的（处理时差和更新延迟）
+                pub_date = article.publish_date
+                if pub_date and pub_date.date() < today - datetime.timedelta(days=2):
                     continue
 
-        except Exception as e:
-            print(f"⚠️ 站点 {base_url} 抓取跳过: {e}")
+                print(f"📝 正在总结: {article.title}")
+                summary = get_ai_summary(article.title, article.text)
+                
+                if summary:
+                    final_report += f"## 📰 {article.title}\n"
+                    final_report += f"**来源**: {config['name']} | [原文链接]({link})\n\n"
+                    final_report += f"{summary}\n\n---\n\n"
+                    found_any = True
+                    time.sleep(12) # 严格控制频率
+            except Exception as e:
+                print(f"跳过文章 {link}: {e}")
+                continue
 
     if not found_any:
-        final_report += "今日在指定源中未发现符合条件的实时新闻。"
+        final_report += "今日在 10 个指定源中未检索到符合条件的实时新闻（可能今日无更新或搜索结构变化）。"
 
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(final_report)
-    print(f"🚀 报告已生成: {report_path}")
+    print(f"✅ 专报已生成: {report_path}")
 
 if __name__ == "__main__":
     run_scraper()
