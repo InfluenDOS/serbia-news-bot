@@ -29,23 +29,20 @@ SITES_CONFIG = [
 
 def get_ai_summary(title, text):
     """
-    AI 充当情报官：只摘要今日发生的硬新闻
+    调整为：更温柔的总结者，不再动不动就 SKIP
     """
     if not text or len(text.strip()) < 100:
         return None
 
+    # 放宽口径：要求总结，而不是判定
     prompt = f"""
-    你是一个负责实时情报监控的分析师。你的任务是处理以下新闻，并执行严格过滤：
+    你是一个专业的巴尔干时政情报分析师。请针对以下文章，重点提取【今日发生的客观动作】。
 
-    【判定规则】：
-    1. **事件时效性**：这篇文章描述的是今天（2026年2月10日）发生的具体动作、声明、抗议或冲突吗？
-    2. **内容属性**：如果是对过去事情的分析、主观评论、历史回顾，请只回答“SKIP”。
-    3. **摘要要求**：如果是今日硬新闻，请用中文写一篇400-800字的深度摘要。
-
-    【摘要重点】：
-    - 发生了什么具体动作（时间、地点、人物、行为）？
-    - 核心人物说了什么（引用原话）？
-    - 现场具体细节（人数、冲突、警方动作等）。
+    【提取重点】：
+    1. 发生了什么具体事件？（时间、地点、人物）
+    2. 核心人物的原话是什么？
+    3. 如果该文章纯属社会杂闻或国际旧闻，请简短总结（100字以内）。
+    4. 如果是反对派动作、学生运动或重大的官方表态，请深度总结（400-800字）。
 
     原文标题：{title}
     原文内容：{text}
@@ -55,11 +52,16 @@ def get_ai_summary(title, text):
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(model=MODEL_ID, contents=prompt)
-            return response.text if response.text else None
+            return response.text if response.text else "AI 摘要内容为空"
         except Exception as e:
-            if "429" in str(e) or "503" in str(e):
-                time.sleep((attempt + 1) * 30)
+            err_msg = str(e)
+            if "429" in err_msg or "503" in err_msg:
+                # 遇到限流，我们需要更长时间的冷却
+                wait_time = (attempt + 1) * 60 
+                print(f"⚠️ API 繁忙 ({err_msg[:20]}...)，进入强制冷却 {wait_time} 秒...")
+                time.sleep(wait_time)
             else:
+                print(f"❌ API 严重错误: {err_msg}")
                 break
     return None
 
@@ -115,23 +117,20 @@ def run_scraper():
                 if not article.publish_date or article.publish_date.date() != today:
                     continue
 
-                print(f"📝 正在评估并摘要: {article.title}")
+                print(f"📝 正在总结: {article.title}")
                 summary = get_ai_summary(article.title, article.text)
                 
-                # --- 新增调试日志 ---
-                if not summary:
-                    print(f"❌ AI 未返回内容 (可能是 API 错误)")
-                elif "SKIP" in summary.upper():
-                    print(f"⏩ AI 判定为非硬新闻，已跳过。")
-                else:
-                    print(f"✅ AI 摘要成功，字数: {len(summary)}")
+                if summary:
+                    print(f"✅ 摘要完成 (来源: {config['name']})")
                     final_report += f"## 📰 {article.title}\n"
                     final_report += f"**来源**: {config['name']} | [原文链接]({link})\n\n"
                     final_report += f"{summary}\n\n---\n\n"
                     found_any = True
-                    time.sleep(20) 
-            except Exception as e:
-                print(f"⚠️ 处理出错: {e}")
+                    # 【核心修改】强制休眠 45 秒，避开 Google 的监控
+                    print("💤 等待 45 秒以保护 API 配额...")
+                    time.sleep(45) 
+                else:
+                    print(f"⚠️ {article.title} 未能生成摘要")
 
     if not found_any:
         final_report += f"今日 ({today}) 未检索到符合要求的硬新闻动态。"
