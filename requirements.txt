@@ -1,3 +1,4 @@
 newspaper4k
 requests
 lxml
+lxml_html_clean
