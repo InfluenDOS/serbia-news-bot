@@ -7,7 +7,7 @@ import google.generativeai as genai
 
 # === 1. 配置 AI 引擎 ===
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-ai_model = genai.GenerativeModel('gemini-1.5-flash')
+ai_model = genai.GenerativeModel('gemini-1.5-flash-latest')
 
 # === 2. 目标网站配置 ===
 # 这里的搜索链接会根据关键词动态生成
@@ -23,6 +23,9 @@ SITES = [
 KEYWORD = "opozicija" # 塞尔维亚语：反对派
 
 def get_ai_summary(title, text):
+    if not text or len(text) < 100: # 如果正文太短，直接跳过，节省 API 次数
+        return "原文内容过短，无法生成摘要。"
+        
     """调用 Gemini 生成深度摘要"""
     prompt = f"""
     你是一个深耕巴尔干半岛政治的专业分析师。请为我摘要以下关于塞尔维亚反对派的新闻。
