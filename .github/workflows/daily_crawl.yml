@@ -1,0 +1,35 @@
+name: Daily News Scraper
+
+on:
+  schedule:
+    # 每天格林威治时间 17:00 运行（对应塞尔维亚标准时间 18:00）
+    - cron: '0 17 * * *'
+  workflow_dispatch: # 允许你手动点击运行
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+
+    - name: Run scraper
+      run: python scraper.py
+
+    - name: Commit and push changes
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add reports/
+        git commit -m "Add today's news report" || echo "No changes to commit"
+        git push
