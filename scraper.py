@@ -102,6 +102,11 @@ def run_scraper():
         links = extract_links(config['search'], today_str_list)
         
         for link in links:
+            # --- 核心修改：在此处插入黑名单过滤 ---
+            blacklist = ['/opinion/', '/komentari/', '/kolumna/', '/svet-oko-nas/', '/izbori-2023/', '/stav/']
+            if any(word in href for word in blacklist):
+                continue # 如果链接包含这些词，直接跳过，看下一个
+                
             try:
                 article = Article(link, language='sr')
                 article.download()
@@ -112,11 +117,7 @@ def run_scraper():
                 if not article.publish_date or article.publish_date.date() != today:
                     continue
 
-                # --- 核心修改：在此处插入黑名单过滤 ---
-            blacklist = ['/opinion/', '/komentari/', '/kolumna/', '/svet-oko-nas/', '/izbori-2023/', '/stav/']
-            if any(word in href for word in blacklist):
-                continue # 如果链接包含这些词，直接跳过，看下一个
-            # -----------------------------------
+               
                 print(f"📝 正在总结今日新闻: {article.title}")
                 summary = get_ai_summary(article.title, article.text)
                 
