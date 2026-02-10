@@ -4,45 +4,41 @@ import datetime
 import requests
 from bs4 import BeautifulSoup
 from newspaper import Article
-
-# 修改这里：使用更直接的导入路径
 try:
     import google.genai as genai
 except ImportError:
-    # 兼容某些特定环境下的导入路径
     from google import genai
 
-# === 1. 配置新版 AI 引擎 ===
-# 2026年推荐使用新的 Client 模式
+# === 1. 配置 AI 引擎 ===
 client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
-MODEL_ID = 'gemini-2.0-flash' # 2.0/2.5 flash 在新 SDK 中不需要 models/ 前缀
-
-# === 2. 目标网站配置 ===
-SITES_CONFIG = [
-    {"name": "N1 Info", "search": "https://n1info.rs/?s=opozicija"},
-    {"name": "Nova.rs", "search": "https://nova.rs/?s=opozicija"},
-    {"name": "Danas", "search": "https://www.danas.rs/?s=opozicija"},
-    {"name": "Balkan Insight", "search": "https://balkaninsight.com/?s=serbia+opposition"},
-    {"name": "Slobodna Evropa", "search": "https://www.slobodnaevropa.org/s?k=opozicija"}
-]
+# 免费版建议使用 1.5-flash，它更稳定，限流较少
+MODEL_ID = 'models/gemini-flash-latest'
 
 def get_ai_summary(title, text):
-    """使用新版 google-genai SDK 生成摘要"""
+    """带自动重试逻辑的 AI 摘要生成"""
     if not text or len(text.strip()) < 100:
         return None
 
     prompt = f"你是一个资深的巴尔干政治分析师。请为这篇关于‘塞尔维亚反对派’的新闻写一篇400-800字的中文深度摘要。重点关注人物、动作和政治诉求。原文：标题【{title}】，正文【{text}】"
     
-    try:
-        # 新版 SDK 的调用方式
-        response = client.models.generate_content(
-            model=MODEL_ID,
-            contents=prompt
-        )
-        return response.text if response.text else None
-    except Exception as e:
-        print(f"❌ AI 摘要失败: {e}")
-        return None
+    # 最大尝试次数
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            response = client.models.generate_content(
+                model=MODEL_ID,
+                contents=prompt
+            )
+            return response.text if response.text else None
+        except Exception as e:
+            if "429" in str(e):
+                wait_time = (attempt + 1) * 15  # 遇到限流，依次等待 15s, 30s, 45s
+                print(f"⚠️ 触发限流，{wait_time}秒后进行第 {attempt+1} 次重试...")
+                time.sleep(wait_time)
+            else:
+                print(f"❌ AI 摘要失败: {e}")
+                break
+    return None
 
 def extract_links(url):
     """手动提取搜索结果中的文章链接"""
@@ -62,7 +58,7 @@ def extract_links(url):
                     links.append(href)
     except Exception as e:
         print(f"提取链接出错: {e}")
-    return list(set(links))[:3]
+    return list(set(links))[:2] # 限制每个站点只抓 2 篇，降低 API 压力
 
 def run_scraper():
     today = datetime.date.today()
@@ -72,7 +68,11 @@ def run_scraper():
     final_report = f"# 🇷🇸 塞尔维亚反对派动态每日深度专报\n\n**生成日期**: {today}\n\n---\n"
     found_any = False
 
-    for config in SITES_CONFIG:
+    for config in [
+        {"name": "N1 Info", "search": "https://n1info.rs/?s=opozicija"},
+        {"name": "Nova.rs", "search": "https://nova.rs/?s=opozicija"},
+        {"name": "Danas", "search": "https://www.danas.rs/?s=opozicija"}
+    ]:
         print(f"🔍 扫描站点: {config['name']}")
         links = extract_links(config['search'])
         
@@ -82,11 +82,6 @@ def run_scraper():
                 article.download()
                 article.parse()
                 
-                # 过滤太旧的文章
-                pub_date = article.publish_date
-                if pub_date and pub_date.date() < today - datetime.timedelta(days=2):
-                    continue
-
                 print(f"📝 正在总结: {article.title}")
                 summary = get_ai_summary(article.title, article.text)
                 
@@ -95,7 +90,8 @@ def run_scraper():
                     final_report += f"**来源**: {config['name']} | [原文链接]({link})\n\n"
                     final_report += f"{summary}\n\n---\n\n"
                     found_any = True
-                    time.sleep(5) # 新版 SDK 响应更快，缩短等待
+                    # 抓完一篇强制休息 20 秒，确保不触发 RPM 限制
+                    time.sleep(20) 
             except Exception as e:
                 continue
 
