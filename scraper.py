@@ -98,4 +98,14 @@ def run_scraper():
         f.write(final_report)
 
 if __name__ == "__main__":
+    # === 新增调试部分开始 ===
+    print("--- 正在获取可用模型列表 ---")
+    try:
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                print(f"可用模型: {m.name}")
+    except Exception as e:
+        print(f"无法获取模型列表: {e}")
+    print("--- 调试结束，开始抓取任务 ---\n")
+    # === 新增调试部分结束 ===
     run_scraper()
