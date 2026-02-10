@@ -70,8 +70,15 @@ def run_scraper():
 
     for config in [
         {"name": "N1 Info", "search": "https://n1info.rs/?s=opozicija"},
-        {"name": "Nova.rs", "search": "https://nova.rs/?s=opozicija"},
-        {"name": "Danas", "search": "https://www.danas.rs/?s=opozicija"}
+    {"name": "Nova.rs", "search": "https://nova.rs/?s=opozicija"},
+    {"name": "Danas", "search": "https://www.danas.rs/?s=opozicija"},
+    {"name": "Balkan Insight", "search": "https://balkaninsight.com/?s=serbia+opposition"},
+    {"name": "Slobodna Evropa", "search": "https://www.slobodnaevropa.org/s?k=opozicija"},
+    {"name": "B92", "search": "https://www.b92.net/specijal/3/english/search.php?q=opposition"},
+    {"name": "BBC Serbian", "search": "https://www.bbc.com/serbian/lat/search?q=opozicija"},
+    {"name": "Vreme", "search": "https://vreme.com/?s=opozicija"},
+    {"name": "Demostat", "search": "https://demostat.rs/sr/pretraga?q=opozicija"},
+    {"name": "Serbian Times", "search": "https://serbiantimes.info/en/?s=opposition"}
     ]:
         print(f"🔍 扫描站点: {config['name']}")
         links = extract_links(config['search'])
