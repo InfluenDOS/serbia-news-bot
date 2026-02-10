@@ -4,7 +4,13 @@ import datetime
 import requests
 from bs4 import BeautifulSoup
 from newspaper import Article
-from google import genai # 使用全新的库
+
+# 修改这里：使用更直接的导入路径
+try:
+    import google.genai as genai
+except ImportError:
+    # 兼容某些特定环境下的导入路径
+    from google import genai
 
 # === 1. 配置新版 AI 引擎 ===
 # 2026年推荐使用新的 Client 模式
