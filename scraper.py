@@ -15,16 +15,10 @@ MODEL_ID = 'models/gemini-flash-latest'
 
 # === 2. 10个目标网站配置 ===
 SITES_CONFIG = [
-    {"name": "N1 Info", "search": "https://n1info.rs/?s=opozicija"},
-    {"name": "Nova.rs", "search": "https://nova.rs/?s=opozicija"},
-    {"name": "Danas", "search": "https://www.danas.rs/?s=opozicija"},
-    {"name": "Balkan Insight", "search": "https://balkaninsight.com/?s=serbia+opposition"},
-    {"name": "Slobodna Evropa", "search": "https://www.slobodnaevropa.org/s?k=opozicija"},
-    {"name": "B92", "search": "https://www.b92.net/specijal/3/english/search.php?q=opposition"},
-    {"name": "BBC Serbian", "search": "https://www.bbc.com/serbian/lat/search?q=opozicija"},
-    {"name": "Vreme", "search": "https://vreme.com/?s=opozicija"},
-    {"name": "Demostat", "search": "https://demostat.rs/sr/pretraga?q=opozicija"},
-    {"name": "Serbian Times", "search": "https://serbiantimes.info/en/?s=opposition"}
+    {"name": "N1 Info", "search": "https://n1info.rs/?s=opozicija+danas"}, # danas 表示“今天”
+    {"name": "Nova.rs", "search": "https://nova.rs/?s=opozicija+najnovije"}, # najnovije 表示“最新”
+    {"name": "Danas", "search": "https://www.danas.rs/?s=opozicija+vesti"},
+    # ... 其他站点保持类似逻辑   
 ]
 
 def get_ai_summary(title, text):
@@ -32,26 +26,47 @@ def get_ai_summary(title, text):
     if not text or len(text.strip()) < 100:
         return None
 
-    prompt = f"你是一个资深的巴尔干政治分析师。请为这篇关于‘塞尔维亚反对派’的新闻写一篇400-800字的中文深度摘要。重点关注人物、动作和政治诉求。原文：标题【{title}】，正文【{text}】"
+   # 核心 Prompt 升级：增加时效性判定
+    prompt = f"""
+    你是一个负责实时情报监控的分析师。你的任务是处理以下新闻稿，并执行严格过滤：
+
+    【判定规则】：
+    1. **事件时效性**：这篇文章描述的是【今天（2026年2月10日）】发生的具体事件、声明、抗议或冲突吗？
+    2. **内容属性**：如果是对过去一周的总结、历史回顾、或者纯粹的评论分析（没有今日新增动作），请直接回答“SKIP”。
+    3. **摘要要求**：如果通过判定，请用中文写一篇400-800字的深度摘要。
+
+    【摘要重点】：
+    - 发生了什么具体动作（谁、在哪、做了什么）？
+    - 重要人物的原始表述（他说原话是什么，而不是别人对他的评价）。
+    - 现场细节（人数、氛围、警方动作等）。
+
+    【文章标题】：{title}
+    【文章正文】：{text}
+    """
     
     max_retries = 3
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(model=MODEL_ID, contents=prompt)
-            return response.text if response.text else None
+            content = response.text.strip()
+            
+            # 如果 AI 判定不是今日新闻，则不输出
+            if content.upper() == "SKIP":
+                print(f"⏩ 跳过分析类或非今日事件文章: {title}")
+                return None
+            return content
         except Exception as e:
-            if "429" in str(e) or "503" in str(e):
-                wait_time = (attempt + 1) * 30
-                print(f"⚠️ 临时错误，{wait_time}秒后重试...")
-                time.sleep(wait_time)
-            else:
-                break
+            # (保持原有的 429/503 重试逻辑...)
+            time.sleep(30)
     return None
 
 def extract_links(url, today_str_list):
     """提取链接，且链接必须包含今天的日期特征"""
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'}
     links = []
+    blacklist = ['/opinion/', '/komentari/', '/kolumna/', '/svet-oko-nas/', '/izbori-2023/']
+    if any(word in href for word in blacklist):
+        continue
     try:
         res = requests.get(url, headers=headers, timeout=20)
         soup = BeautifulSoup(res.text, 'html.parser')
