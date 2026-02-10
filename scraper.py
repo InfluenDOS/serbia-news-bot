@@ -64,9 +64,7 @@ def extract_links(url, today_str_list):
     """提取链接，且链接必须包含今天的日期特征"""
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'}
     links = []
-    blacklist = ['/opinion/', '/komentari/', '/kolumna/', '/svet-oko-nas/', '/izbori-2023/']
-    if any(word in href for word in blacklist):
-        continue
+    
     try:
         res = requests.get(url, headers=headers, timeout=20)
         soup = BeautifulSoup(res.text, 'html.parser')
@@ -114,6 +112,11 @@ def run_scraper():
                 if not article.publish_date or article.publish_date.date() != today:
                     continue
 
+                # --- 核心修改：在此处插入黑名单过滤 ---
+            blacklist = ['/opinion/', '/komentari/', '/kolumna/', '/svet-oko-nas/', '/izbori-2023/', '/stav/']
+            if any(word in href for word in blacklist):
+                continue # 如果链接包含这些词，直接跳过，看下一个
+            # -----------------------------------
                 print(f"📝 正在总结今日新闻: {article.title}")
                 summary = get_ai_summary(article.title, article.text)
                 
