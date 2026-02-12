@@ -8,8 +8,7 @@ from newspaper import Article
 # === 1. 验证配置 (只看 Danas) ===
 SITE_URL = "https://www.danas.rs/vesti/"
 # 如果你想测试昨天的，把下面的 today 改成 datetime.date(2026, 2, 11)
-TARGET_DATE = datetime.date.today() 
-
+TARGET_DATE = datetime.date(2026, 2, 10)
 def extract_raw_links(url):
     """从 Danas 新闻流中提取所有潜在链接"""
     headers = {
