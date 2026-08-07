@@ -4,6 +4,14 @@ on:
   schedule:
     # 每天 UTC 17:00 ≈ 贝尔格莱德冬季 18:00 / 夏季 19:00
     - cron: "0 17 * * *"
+  push:
+    branches: [main]
+    paths:
+      - "serbia_news_bot/**"
+      - "main.py"
+      - "scraper.py"
+      - "requirements.txt"
+      - ".github/workflows/daily_crawl.yml"
   workflow_dispatch:
     inputs:
       target_date:
@@ -37,8 +45,8 @@ jobs:
       - name: Run daily pipeline
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          TARGET_DATE: ${{ github.event.inputs.target_date }}
-          DRY_RUN: ${{ github.event.inputs.dry_run }}
+          TARGET_DATE: ${{ github.event.inputs.target_date || '' }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
           TZ: Europe/Belgrade
         run: python main.py
 
