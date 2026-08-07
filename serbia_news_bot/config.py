@@ -8,16 +8,20 @@ from zoneinfo import ZoneInfo
 
 BELGRADE_TZ = ZoneInfo("Europe/Belgrade")
 
-# Gemini
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "models/gemini-flash-latest")
+# Kimi / Moonshot（OpenAI 兼容）
+KIMI_API_KEY = (
+    os.environ.get("KIMI_API_KEY", "").strip()
+    or os.environ.get("MOONSHOT_API_KEY", "").strip()
+)
+KIMI_BASE_URL = os.environ.get("KIMI_BASE_URL", "https://api.moonshot.ai/v1").rstrip("/")
+KIMI_MODEL = os.environ.get("KIMI_MODEL", "kimi-k2.6")
 
 # 行为开关
 DRY_RUN = os.environ.get("DRY_RUN", "").lower() in {"1", "true", "yes"}
 MAX_ARTICLES_PER_SITE = int(os.environ.get("MAX_ARTICLES_PER_SITE", "8"))
 REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "20"))
 ARTICLE_SLEEP_SEC = float(os.environ.get("ARTICLE_SLEEP_SEC", "0.4"))
-AI_SLEEP_SEC = float(os.environ.get("AI_SLEEP_SEC", "8"))
+AI_SLEEP_SEC = float(os.environ.get("AI_SLEEP_SEC", "3"))
 AI_MAX_RETRIES = int(os.environ.get("AI_MAX_RETRIES", "3"))
 MIN_ARTICLE_CHARS = int(os.environ.get("MIN_ARTICLE_CHARS", "180"))
 REPORTS_DIR = os.environ.get("REPORTS_DIR", "reports")
