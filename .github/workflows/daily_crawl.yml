@@ -1,39 +1,51 @@
-name: Daily News Scraper with AI
+name: Daily Opposition Watch
 
 on:
   schedule:
-    # 每天格林威治时间 17:00 (塞尔维亚 18:00)
-    - cron: '0 17 * * *'
-  workflow_dispatch: 
+    # 每天 UTC 17:00 ≈ 贝尔格莱德冬季 18:00 / 夏季 19:00
+    - cron: "0 17 * * *"
+  workflow_dispatch:
+    inputs:
+      target_date:
+        description: "监测日 YYYY-MM-DD（留空=贝尔格莱德今天）"
+        required: false
+        default: ""
+      dry_run:
+        description: "仅抓取粗筛，不调用 Gemini（true/false）"
+        required: false
+        default: "false"
 
 jobs:
-  build:
+  crawl:
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
 
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-    - name: Run scraper
-      env:
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      run: python scraper.py
+      - name: Run daily pipeline
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TARGET_DATE: ${{ github.event.inputs.target_date }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+          TZ: Europe/Belgrade
+        run: python main.py
 
-    - name: Commit and push changes
-      run: |
-        git config --local user.email "github-actions[bot]@users.noreply.github.com"
-        git config --local user.name "github-actions[bot]"
-        git add reports/
-        git commit -m "Add AI-summarized report for $(date +'%Y-%m-%d')" || echo "No changes"
-        git push
+      - name: Commit report
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add reports/
+          git commit -m "Add daily report for $(date +'%Y-%m-%d')" || echo "No changes"
+          git push
