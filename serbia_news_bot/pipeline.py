@@ -107,4 +107,14 @@ def run_pipeline() -> Path:
         stats.skipped_ai,
         stats.errors,
     )
+    if (
+        not config.DRY_RUN
+        and stats.articles_parsed > 0
+        and stats.kept == 0
+        and stats.skipped_ai == 0
+        and stats.errors > 0
+    ):
+        raise RuntimeError(
+            f"AI 评估全部失败（errors={stats.errors}）。请检查 GEMINI_API_KEY / 模型权限。"
+        )
     return out
