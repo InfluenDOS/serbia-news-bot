@@ -1,4 +1,4 @@
-"""Gemini：判定是否与在野党/反执政阵营相关，并生成中文摘要。"""
+"""Kimi（Moonshot）：判定是否与在野党/反执政阵营相关，并生成中文摘要。"""
 
 from __future__ import annotations
 
@@ -9,15 +9,12 @@ import time
 from dataclasses import dataclass
 from datetime import date
 
+from openai import OpenAI
+
 from . import config
 from .article import ParsedArticle
 
 logger = logging.getLogger(__name__)
-
-try:
-    import google.genai as genai
-except ImportError:  # pragma: no cover
-    from google import genai  # type: ignore
 
 
 @dataclass
@@ -32,14 +29,13 @@ class AIVerdict:
 _JSON_RE = re.compile(r"\{[\s\S]*\}")
 
 
-def _client():
-    if not config.GEMINI_API_KEY:
-        raise RuntimeError("缺少环境变量 GEMINI_API_KEY")
-    return genai.Client(api_key=config.GEMINI_API_KEY)
+def _client() -> OpenAI:
+    if not config.KIMI_API_KEY:
+        raise RuntimeError("缺少环境变量 KIMI_API_KEY（或 MOONSHOT_API_KEY）")
+    return OpenAI(api_key=config.KIMI_API_KEY, base_url=config.KIMI_BASE_URL)
 
 
 def _build_prompt(article: ParsedArticle, target_date: date) -> str:
-    # 正文截断，控制 token
     body = article.text[:8000]
     return f"""你是巴尔干政治情报分析员。请阅读下面这篇新闻，严格按规则输出 JSON。
 
@@ -79,9 +75,8 @@ def _parse_verdict(text: str) -> AIVerdict:
     match = _JSON_RE.search(raw)
     if not match:
         upper = raw.upper()
-        if upper.startswith("SKIP") or "\"relevant\": false" in raw.lower():
+        if upper.startswith("SKIP") or '"relevant": false' in raw.lower():
             return AIVerdict(False, "非 JSON SKIP", [], "", raw)
-        # 容错：模型直接写了摘要
         if len(raw) > 80 and "SKIP" not in upper:
             return AIVerdict(True, "非 JSON 摘要回退", [], raw, raw)
         return AIVerdict(False, "无法解析", [], "", raw)
@@ -104,7 +99,7 @@ def _parse_verdict(text: str) -> AIVerdict:
 
 
 def evaluate_article(article: ParsedArticle, target_date: date) -> AIVerdict | None:
-    """调用 Gemini；失败返回 None（调用方可选择跳过）。"""
+    """调用 Kimi；失败返回 None。"""
     if config.DRY_RUN:
         return AIVerdict(
             relevant=article.hint_score > 0,
@@ -123,22 +118,29 @@ def evaluate_article(article: ParsedArticle, target_date: date) -> AIVerdict | N
 
     for attempt in range(config.AI_MAX_RETRIES):
         try:
-            response = client.models.generate_content(
-                model=config.GEMINI_MODEL,
-                contents=prompt,
+            response = client.chat.completions.create(
+                model=config.KIMI_MODEL,
+                temperature=1,  # kimi-k2.6 / k3 仅允许 temperature=1
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "你只输出合法 JSON 对象，不要 Markdown 代码围栏，不要额外说明。",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
             )
-            text = getattr(response, "text", None) or ""
+            text = (response.choices[0].message.content or "").strip()
             return _parse_verdict(text)
         except Exception as exc:  # noqa: BLE001
             last_err = exc
             msg = str(exc)
-            if "429" in msg or "503" in msg or "RESOURCE_EXHAUSTED" in msg:
-                wait = (attempt + 1) * 30
-                logger.warning("Gemini 限流/繁忙，%ss 后重试 (%s)", wait, exc)
+            if "429" in msg or "503" in msg or "rate" in msg.lower():
+                wait = (attempt + 1) * 20
+                logger.warning("Kimi 限流/繁忙，%ss 后重试 (%s)", wait, exc)
                 time.sleep(wait)
                 continue
-            logger.warning("Gemini 调用失败: %s", exc)
+            logger.warning("Kimi 调用失败: %s", exc)
             break
 
-    logger.error("Gemini 最终失败: %s", last_err)
+    logger.error("Kimi 最终失败: %s", last_err)
     return None

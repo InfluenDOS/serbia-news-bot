@@ -37,8 +37,8 @@ def run_pipeline() -> Path:
     allowed_dates = config.lookback_dates(target, days=1)
     logger.info("监测日=%s 允许发布日=%s DRY_RUN=%s", target, allowed_dates, config.DRY_RUN)
 
-    if not config.DRY_RUN and not config.GEMINI_API_KEY:
-        raise RuntimeError("缺少环境变量 GEMINI_API_KEY（或设置 DRY_RUN=1）")
+    if not config.DRY_RUN and not config.KIMI_API_KEY:
+        raise RuntimeError("缺少环境变量 KIMI_API_KEY（或设置 DRY_RUN=1）")
 
     stats = PipelineStats()
     candidates: list[ParsedArticle] = []
@@ -118,6 +118,6 @@ def run_pipeline() -> Path:
         and stats.errors > 0
     ):
         raise RuntimeError(
-            f"AI 评估全部失败（errors={stats.errors}）。请检查 GEMINI_API_KEY / 模型权限。"
+            f"AI 评估全部失败（errors={stats.errors}）。请检查 KIMI_API_KEY / 模型权限。"
         )
     return out
