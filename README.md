@@ -51,7 +51,7 @@ python main.py
 
 ## GitHub Actions
 
-`.github/workflows/daily_crawl.yml` 每天 UTC 17:00 运行，也可 `workflow_dispatch` 手动触发。仓库需配置 Secret：`KIMI_API_KEY`。
+`.github/workflows/daily_crawl.yml` 每天约在**贝尔格莱德时间 20:00**运行（UTC 18:00；冬令时会偏到当地 19:00），也可 `workflow_dispatch` 手动触发。仓库需配置 Secret：`KIMI_API_KEY`。
 
 ## 项目结构
 
