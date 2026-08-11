@@ -2,8 +2,9 @@ name: Daily Opposition Watch
 
 on:
   schedule:
-    # 每天 UTC 17:00 ≈ 贝尔格莱德冬季 18:00 / 夏季 19:00
-    - cron: "0 17 * * *"
+    # 目标：贝尔格莱德 20:00
+    # GitHub cron 只用 UTC，夏令时(CEST)=UTC 18:00；冬令时会变成当地 19:00
+    - cron: "0 18 * * *"
   push:
     branches: [main]
     paths:
