@@ -26,6 +26,15 @@ AI_MAX_RETRIES = int(os.environ.get("AI_MAX_RETRIES", "3"))
 MIN_ARTICLE_CHARS = int(os.environ.get("MIN_ARTICLE_CHARS", "180"))
 REPORTS_DIR = os.environ.get("REPORTS_DIR", "reports")
 
+# 邮件（可选）：配齐凭证后每日自动发送
+REPORT_TO_EMAIL = os.environ.get("REPORT_TO_EMAIL", "speechlessgorilla@gmail.com").strip()
+REPORT_FROM_EMAIL = os.environ.get("REPORT_FROM_EMAIL", "").strip()
+SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com").strip()
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_USER = os.environ.get("SMTP_USER", "").strip()
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "").strip()
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "").strip()
+
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) "

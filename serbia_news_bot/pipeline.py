@@ -10,6 +10,7 @@ from pathlib import Path
 from . import config
 from .ai import evaluate_article
 from .article import ParsedArticle, download_article
+from .emailer import send_report_email
 from .fetch import extract_article_links
 from .report import ReportItem, write_report
 from .sources import SOURCES
@@ -120,4 +121,8 @@ def run_pipeline() -> Path:
         raise RuntimeError(
             f"AI 评估全部失败（errors={stats.errors}）。请检查 KIMI_API_KEY / 模型权限。"
         )
+
+    if not config.DRY_RUN:
+        send_report_email(out, kept=stats.kept, scanned=stats.articles_parsed)
+
     return out
