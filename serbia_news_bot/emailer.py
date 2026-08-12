@@ -28,7 +28,7 @@ def _send_via_resend(subject: str, body: str, report_path: Path) -> None:
     from_addr = config.REPORT_FROM_EMAIL or "serbia-news-bot@resend.dev"
     payload = {
         "from": from_addr,
-        "to": [config.REPORT_TO_EMAIL],
+        "to": [addr.strip() for addr in config.REPORT_TO_EMAIL.split(",") if addr.strip()],
         "subject": subject,
         "text": body,
     }
@@ -52,10 +52,20 @@ def _send_via_smtp(subject: str, body: str, report_path: Path) -> None:
     msg["From"] = config.REPORT_FROM_EMAIL or config.SMTP_USER
     msg["To"] = config.REPORT_TO_EMAIL
     msg.set_content(body)
+
+    suffix = report_path.suffix.lower()
+    if suffix == ".docx":
+        maintype, subtype = (
+            "application",
+            "vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+    else:
+        maintype, subtype = "text", "plain"
+
     msg.add_attachment(
         report_path.read_bytes(),
-        maintype="text",
-        subtype="markdown",
+        maintype=maintype,
+        subtype=subtype,
         filename=report_path.name,
     )
 
@@ -81,8 +91,7 @@ def send_report_email(report_path: Path, *, kept: int, scanned: int) -> bool:
         f"监测完成。\n"
         f"候选扫描: {scanned} 篇\n"
         f"收录: {kept} 篇\n"
-        f"报告文件: {report_path.name}\n\n"
-        f"{report_path.read_text(encoding='utf-8')}"
+        f"完整报告请查看附件 Word 文档：{report_path.name}\n"
     )
 
     try:

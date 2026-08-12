@@ -23,7 +23,7 @@
 1. 拉取各站新闻列表，抽取文章链接  
 2. 下载正文，按贝尔格莱德时区过滤发布日（默认今天 + 昨天）  
 3. Kimi 判定是否符合在野党口径；符合则写中文事实摘要  
-4. 写入 `reports/report_YYYY-MM-DD.md`
+4. 写入 `reports/report_YYYY-MM-DD.docx`（Word 文档）
 
 ## 本地运行
 
@@ -73,7 +73,7 @@ serbia_news_bot/
   fetch.py                 # 列表页链接抽取
   article.py               # 正文与日期
   ai.py                    # Kimi 判定 + 摘要
-  report.py                # Markdown 输出
+  report.py                # Word 输出
   pipeline.py              # 编排
 reports/
 ```
