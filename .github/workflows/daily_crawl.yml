@@ -48,6 +48,13 @@ jobs:
           KIMI_API_KEY: ${{ secrets.KIMI_API_KEY }}
           TARGET_DATE: ${{ github.event.inputs.target_date || '' }}
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          REPORT_TO_EMAIL: ${{ secrets.REPORT_TO_EMAIL || 'speechlessgorilla@gmail.com' }}
+          REPORT_FROM_EMAIL: ${{ secrets.REPORT_FROM_EMAIL }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST || 'smtp.gmail.com' }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT || '587' }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           TZ: Europe/Belgrade
         run: python main.py
 

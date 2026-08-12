@@ -53,6 +53,15 @@ python main.py
 
 `.github/workflows/daily_crawl.yml` 每天约在**贝尔格莱德时间 20:00**运行（UTC 18:00；冬令时会偏到当地 19:00），也可 `workflow_dispatch` 手动触发。仓库需配置 Secret：`KIMI_API_KEY`。
 
+可选邮件（跑完自动发到邮箱）：
+
+| Secret | 说明 |
+|--------|------|
+| `REPORT_TO_EMAIL` | 收件人，默认 `speechlessgorilla@gmail.com` |
+| `SMTP_USER` + `SMTP_PASSWORD` | Gmail 等 SMTP（推荐应用专用密码） |
+| 或 `RESEND_API_KEY` | Resend 发信 |
+| `REPORT_FROM_EMAIL` | 发件人显示地址（可选） |
+
 ## 项目结构
 
 ```
