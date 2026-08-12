@@ -5,14 +5,6 @@ on:
     # 目标：贝尔格莱德 20:00
     # GitHub cron 只用 UTC，夏令时(CEST)=UTC 18:00；冬令时会变成当地 19:00
     - cron: "0 18 * * *"
-  push:
-    branches: [main]
-    paths:
-      - "serbia_news_bot/**"
-      - "main.py"
-      - "scraper.py"
-      - "requirements.txt"
-      - ".github/workflows/daily_crawl.yml"
   workflow_dispatch:
     inputs:
       target_date:
