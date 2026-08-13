@@ -37,7 +37,23 @@ def run_pipeline() -> Path:
     target = config.resolve_target_date()
     # 严格当天：不再回看前一日
     allowed_dates = config.lookback_dates(target, days=0)
-    logger.info("监测日=%s 允许发布日=%s DRY_RUN=%s", target, allowed_dates, config.DRY_RUN)
+    report_path = Path(config.REPORTS_DIR) / f"report_{target.isoformat()}.docx"
+    logger.info(
+        "监测日=%s 允许发布日=%s DRY_RUN=%s event=%s",
+        target,
+        allowed_dates,
+        config.DRY_RUN,
+        config.GITHUB_EVENT_NAME or "(local)",
+    )
+
+    # 定时任务若当日报告已存在则跳过，避免与手动跑重复发信
+    if (
+        config.GITHUB_EVENT_NAME == "schedule"
+        and not config.FORCE_RERUN
+        and report_path.exists()
+    ):
+        logger.info("定时任务跳过：当日报告已存在 %s", report_path)
+        return report_path
 
     if not config.DRY_RUN and not config.KIMI_API_KEY:
         raise RuntimeError("缺少环境变量 KIMI_API_KEY（或设置 DRY_RUN=1）")
