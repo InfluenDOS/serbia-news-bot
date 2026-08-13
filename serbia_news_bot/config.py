@@ -18,6 +18,9 @@ KIMI_MODEL = os.environ.get("KIMI_MODEL", "kimi-k2.6")
 
 # 行为开关
 DRY_RUN = os.environ.get("DRY_RUN", "").lower() in {"1", "true", "yes"}
+FORCE_RERUN = os.environ.get("FORCE_RERUN", "").lower() in {"1", "true", "yes"}
+# GitHub Actions 自动注入：schedule / push / workflow_dispatch
+GITHUB_EVENT_NAME = os.environ.get("GITHUB_EVENT_NAME", "").strip()
 MAX_ARTICLES_PER_SITE = int(os.environ.get("MAX_ARTICLES_PER_SITE", "8"))
 # 送入 AI 的正文最大字符数（过长对质量增益有限，却明显烧 token）
 AI_BODY_CHARS = int(os.environ.get("AI_BODY_CHARS", "3200"))
