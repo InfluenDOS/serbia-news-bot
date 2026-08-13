@@ -78,6 +78,23 @@ def run_pipeline() -> Path:
             stats.articles_parsed += 1
 
     candidates.sort(key=_priority_key)
+
+    # 关键词未命中的当天稿件多为无关琐闻，跳过可大幅省 token
+    if config.REQUIRE_HINT_FOR_AI:
+        before = len(candidates)
+        candidates = [a for a in candidates if a.hint_score > 0]
+        skipped_hint = before - len(candidates)
+        if skipped_hint:
+            logger.info("关键词粗筛跳过 %s 篇（hint=0）", skipped_hint)
+
+    if len(candidates) > config.MAX_AI_CANDIDATES:
+        logger.info(
+            "候选过多，按相关度截断 %s → %s",
+            len(candidates),
+            config.MAX_AI_CANDIDATES,
+        )
+        candidates = candidates[: config.MAX_AI_CANDIDATES]
+
     logger.info("进入 AI 评估的候选: %s", len(candidates))
 
     kept: list[ReportItem] = []

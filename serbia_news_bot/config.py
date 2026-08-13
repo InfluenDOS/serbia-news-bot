@@ -19,6 +19,16 @@ KIMI_MODEL = os.environ.get("KIMI_MODEL", "kimi-k2.6")
 # 行为开关
 DRY_RUN = os.environ.get("DRY_RUN", "").lower() in {"1", "true", "yes"}
 MAX_ARTICLES_PER_SITE = int(os.environ.get("MAX_ARTICLES_PER_SITE", "8"))
+# 送入 AI 的正文最大字符数（过长对质量增益有限，却明显烧 token）
+AI_BODY_CHARS = int(os.environ.get("AI_BODY_CHARS", "3200"))
+# 每日最多送 AI 的候选篇数（按关键词相关度优先）
+MAX_AI_CANDIDATES = int(os.environ.get("MAX_AI_CANDIDATES", "36"))
+# hint_score=0 的文章不送 AI（天气/社会琐闻等），显著省 token
+REQUIRE_HINT_FOR_AI = os.environ.get("REQUIRE_HINT_FOR_AI", "1").lower() in {
+    "1",
+    "true",
+    "yes",
+}
 REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT", "20"))
 ARTICLE_SLEEP_SEC = float(os.environ.get("ARTICLE_SLEEP_SEC", "0.4"))
 AI_SLEEP_SEC = float(os.environ.get("AI_SLEEP_SEC", "3"))

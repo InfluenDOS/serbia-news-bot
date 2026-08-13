@@ -165,6 +165,12 @@ RELEVANCE_HINT_TERMS: tuple[str, ...] = (
     "protest",
     "blokad",
     "demonstrac",
+    "izbor",
+    "student",
+    "studenti",
+    "napad",
+    "štrajk",
+    "strajk",
     # 执政党/现政权（出现且同时有在野动作时仍可能相关）
     "vučić",
     "vucic",
@@ -196,4 +202,6 @@ RELEVANCE_HINT_TERMS: tuple[str, ...] = (
     "usamljeni",
     "nezavisni poslanik",
     "poslanički klub",
+    "srce",
+    "pokret",
 )
