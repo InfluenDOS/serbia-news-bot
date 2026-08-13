@@ -35,7 +35,8 @@ def _priority_key(article: ParsedArticle) -> tuple:
 
 def run_pipeline() -> Path:
     target = config.resolve_target_date()
-    allowed_dates = config.lookback_dates(target, days=1)
+    # 严格当天：不再回看前一日
+    allowed_dates = config.lookback_dates(target, days=0)
     logger.info("监测日=%s 允许发布日=%s DRY_RUN=%s", target, allowed_dates, config.DRY_RUN)
 
     if not config.DRY_RUN and not config.KIMI_API_KEY:
@@ -70,8 +71,8 @@ def run_pipeline() -> Path:
             time.sleep(config.ARTICLE_SLEEP_SEC)
             if not article:
                 continue
-            # 无发布日时：仅当关键词粗筛命中才进入 AI，降低噪音
-            if article.publish_date is None and article.hint_score == 0:
+            # 严格当天：必须有发布日且等于监测日
+            if article.publish_date is None or article.publish_date != target:
                 continue
             candidates.append(article)
             stats.articles_parsed += 1
