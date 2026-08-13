@@ -5,13 +5,6 @@ on:
     # 目标：贝尔格莱德 19:00
     # GitHub cron 只用 UTC，夏令时(CEST)=UTC 17:00；冬令时会变成当地 18:00
     - cron: "0 17 * * *"
-  # 临时：用于手动触发今日跑数；跑起来后会再关掉，避免白天误跑
-  push:
-    branches: [main]
-    paths:
-      - "serbia_news_bot/**"
-      - "main.py"
-      - ".github/workflows/daily_crawl.yml"
   workflow_dispatch:
     inputs:
       target_date:
