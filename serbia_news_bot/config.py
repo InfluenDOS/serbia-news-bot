@@ -124,6 +124,6 @@ def date_url_tokens(target: date) -> tuple[str, ...]:
     )
 
 
-def lookback_dates(target: date, days: int = 1) -> list[date]:
-    """允许收录的发布日（默认含目标日及前一天，应对跨日/晚发）。"""
+def lookback_dates(target: date, days: int = 0) -> list[date]:
+    """允许收录的发布日。默认仅监测日当天（days=0）。"""
     return [target - timedelta(days=i) for i in range(days + 1)]

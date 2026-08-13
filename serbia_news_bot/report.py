@@ -1,4 +1,4 @@
-"""报告生成（Word .docx）。"""
+"""报告生成（Word .docx）：仅标题 + 正文 + 原文链接。"""
 
 from __future__ import annotations
 
@@ -21,18 +21,10 @@ class ReportItem:
     verdict: AIVerdict
 
 
-def _add_meta_line(doc: Document, label: str, value: str) -> None:
-    p = doc.add_paragraph()
-    run_label = p.add_run(f"{label}：")
-    run_label.bold = True
-    p.add_run(value)
-
-
 def build_docx(target_date: date, items: list[ReportItem], scanned: int) -> Document:
     doc = Document()
 
-    # 标题
-    title = doc.add_heading(f"塞尔维亚在野党动态每日专报", level=0)
+    title = doc.add_heading("塞尔维亚在野党动态每日专报", level=0)
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     sub = doc.add_paragraph(target_date.isoformat())
     sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -41,47 +33,30 @@ def build_docx(target_date: date, items: list[ReportItem], scanned: int) -> Docu
         sub.runs[0].font.color.rgb = RGBColor(0x66, 0x66, 0x66)
 
     doc.add_paragraph()
-    _add_meta_line(doc, "监测日", target_date.isoformat())
-    _add_meta_line(doc, "口径", "与现执政党立场对立的在野党派 / 反执政阵营硬新闻")
-    _add_meta_line(doc, "候选文章扫描", f"{scanned} 篇")
-    _add_meta_line(doc, "收录", f"{len(items)} 篇")
-    doc.add_paragraph()
 
     if not items:
-        doc.add_paragraph(
-            f"今日（{target_date.isoformat()}）未收录符合口径的在野党相关硬新闻。"
-        )
+        doc.add_paragraph(f"今日（{target_date.isoformat()}）未收录符合口径的在野党相关硬新闻。")
         return doc
 
     for idx, item in enumerate(items, start=1):
-        art = item.article
         ver = item.verdict
-        actors = "、".join(ver.actors) if ver.actors else "—"
-        pub = art.publish_date.isoformat() if art.publish_date else "未知"
+        heading = ver.title_zh.strip() or item.article.title
+        doc.add_heading(f"{idx}. {heading}", level=1)
 
-        doc.add_heading(f"{idx}. {art.title}", level=1)
-        _add_meta_line(doc, "来源", art.source_name)
-        _add_meta_line(doc, "发布日", pub)
-        _add_meta_line(doc, "相关方", actors)
-
-        link_p = doc.add_paragraph()
-        link_p.add_run("原文：").bold = True
-        link_run = link_p.add_run(art.url)
-        link_run.font.color.rgb = RGBColor(0x05, 0x63, 0xC1)
-        link_run.underline = True
-
-        _add_meta_line(doc, "筛选说明", ver.reason)
-        doc.add_paragraph()
-
-        summary_heading = doc.add_paragraph()
-        summary_heading.add_run("摘要").bold = True
         for para in ver.summary_zh.strip().split("\n"):
             if para.strip():
                 doc.add_paragraph(para.strip())
 
-        if idx < len(items):
-            doc.add_paragraph("—" * 40)
+        link_p = doc.add_paragraph()
+        link_run = link_p.add_run(item.article.url)
+        link_run.font.color.rgb = RGBColor(0x05, 0x63, 0xC1)
+        link_run.underline = True
 
+        if idx < len(items):
+            doc.add_paragraph()
+
+    # scanned 仅用于日志侧统计，报告正文不再展示元数据
+    _ = scanned
     return doc
 
 
