@@ -46,6 +46,9 @@ python main.py
 | `TARGET_DATE` | `YYYY-MM-DD`，覆盖监测日 |
 | `DRY_RUN` | `1` 时不调 Kimi，仅关键词粗筛 |
 | `MAX_ARTICLES_PER_SITE` | 每站最多解析篇数，默认 8 |
+| `MAX_AI_CANDIDATES` | 每日最多送 AI 的候选篇数，默认 36 |
+| `AI_BODY_CHARS` | 送入模型的正文截断长度，默认 3200 |
+| `REQUIRE_HINT_FOR_AI` | 默认开启：关键词未命中则不送 AI |
 
 兼容旧入口：`python scraper.py` 会转发到同一流水线。
 
