@@ -1,4 +1,4 @@
-"""Kimi（Moonshot）：判定、摘要；译法校对仅在必要时调用。"""
+"""Kimi（Moonshot）：判定、使馆内政简报体摘要；译法校对仅在必要时调用。"""
 
 from __future__ import annotations
 
@@ -88,12 +88,17 @@ def _clip_body(text: str, limit: int) -> str:
 def _build_prompt(article: ParsedArticle, target_date: date) -> str:
     body = _clip_body(article.text, config.AI_BODY_CHARS)
     date_zh = f"{target_date.year}年{target_date.month}月{target_date.day}日"
-    return f"""判定并摘要塞尔维亚在野/反执政阵营硬新闻。只输出 JSON。
+    return f"""判定并按使馆内政简报体摘要。只输出 JSON。
 
 监测日：{date_zh}（{target_date.isoformat()}）
 目标：与前进党—武契奇执政同盟对立的政党/联盟/议员/领袖行动（声明、抗议、议会、结盟、竞选冲突等）。
 收录须同时：①主内容属上述阵营；②事件发生在监测日当天（非旧闻回顾）；③非纯执政宣传/娱乐体育/无关国际琐闻。
-中文硬性：title_zh/summary_zh 以中文为主，勿直接写英文或西里尔字母；确需缩写仅用中文后括号，如前进党（SNS）；summary_zh≤500字；SNS=前进党（勿写进步党），Vučić=武契奇。
+
+写法（收录时）：
+- title_zh：自制事件题（谁+做了什么），勿直译原标题，勿加「1.」编号。
+- summary_zh：第三人称转述；首句写清主体、时间、动作；写入关键数字、机制、场合；不写记者、不写「据报道」、不评价。
+- 中文为主。专名用新华译法，首次可在中文后括注拉丁，如耶莱娜·帕夫洛维奇（Jelena Pavlović）。政党缩写仅用中文后括号，如前进党（SNS）。勿在括号外写英文或西里尔字母。
+- SNS=前进党（勿写进步党），Vučić=武契奇。summary_zh≤500字，1–2段。
 
 输出：
 {{"relevant":true/false,"reason":"一句中文","title_zh":"...或空","summary_zh":"...或空"}}
@@ -164,7 +169,7 @@ def _needs_ai_polish(title_zh: str, summary_zh: str) -> bool:
 def polish_chinese(title_zh: str, summary_zh: str) -> tuple[str, str]:
     """二次校对：统一主流中文译法，去掉不必要的外文。"""
     client = _client()
-    prompt = f"""校对标题与正文：只改译法/外文，不增删事实。中文为主；外文仅可在中文后括号。SNS→前进党（勿进步党）；Vučić→武契奇。≤500字。
+    prompt = f"""校对使馆内政简报体：只改译法/外文/体例，不增删事实。标题须为自制事件题（勿像原标题直译）。正文第三人称；外文仅可在中文后括号。SNS→前进党（勿进步党）；Vučić→武契奇。≤500字。
 只输出：{{"title_zh":"...","summary_zh":"..."}}
 
 标题：{title_zh}
