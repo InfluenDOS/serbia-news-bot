@@ -72,11 +72,13 @@ def build_docx(target_date: date, items: list[ReportItem], scanned: int) -> Docu
         heading = ver.title_zh.strip() or item.article.title
         doc.add_heading(heading, level=2)
 
-        for para_text in ver.summary_zh.strip().split("\n"):
-            if para_text.strip():
-                p = doc.add_paragraph(para_text.strip())
-                if p.runs:
-                    _set_run_font(p.runs[0], size_pt=12)
+        summary = " ".join(
+            line.strip() for line in ver.summary_zh.strip().splitlines() if line.strip()
+        ).replace(" ", "")
+        if summary:
+            p = doc.add_paragraph(summary)
+            if p.runs:
+                _set_run_font(p.runs[0], size_pt=12)
 
         _add_meta_line(doc, "来源", item.article.source_name)
         _add_meta_line(doc, "链接", item.article.url, link=True)
