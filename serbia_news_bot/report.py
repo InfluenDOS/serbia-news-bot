@@ -1,4 +1,4 @@
-"""报告生成（Word .docx）：仅标题 + 正文 + 原文链接。"""
+"""报告生成（Word .docx）：使馆内政简报体 + 来源 + 原文链接。"""
 
 from __future__ import annotations
 
@@ -8,11 +8,16 @@ from pathlib import Path
 
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.oxml.ns import qn
 from docx.shared import Pt, RGBColor
 
 from .ai import AIVerdict
 from .article import ParsedArticle
 from .config import REPORTS_DIR
+
+_WEEKDAYS = "一二三四五六日"
+_META_COLOR = RGBColor(0x55, 0x55, 0x55)
+_LINK_COLOR = RGBColor(0x05, 0x63, 0xC1)
 
 
 @dataclass
@@ -21,39 +26,66 @@ class ReportItem:
     verdict: AIVerdict
 
 
+def _date_zh(target_date: date) -> str:
+    weekday = _WEEKDAYS[target_date.weekday()]
+    return f"{target_date.year}年{target_date.month}月{target_date.day}日（星期{weekday}）"
+
+
+def _set_run_font(run, *, size_pt: float, color: RGBColor | None = None, bold: bool = False) -> None:
+    run.font.size = Pt(size_pt)
+    run.font.name = "Times New Roman"
+    run._element.rPr.rFonts.set(qn("w:eastAsia"), "宋体")
+    run.bold = bold
+    if color is not None:
+        run.font.color.rgb = color
+
+
+def _add_meta_line(doc: Document, label: str, value: str, *, link: bool = False) -> None:
+    para = doc.add_paragraph()
+    para.paragraph_format.space_after = Pt(2)
+    label_run = para.add_run(f"{label}：")
+    _set_run_font(label_run, size_pt=10.5, color=_META_COLOR)
+    value_run = para.add_run(value)
+    _set_run_font(value_run, size_pt=10.5, color=_LINK_COLOR if link else _META_COLOR)
+    if link:
+        value_run.underline = True
+
+
 def build_docx(target_date: date, items: list[ReportItem], scanned: int) -> Document:
     doc = Document()
 
     title = doc.add_heading("塞尔维亚在野党动态每日专报", level=0)
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    sub = doc.add_paragraph(target_date.isoformat())
+    sub = doc.add_paragraph(_date_zh(target_date))
     sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
     if sub.runs:
-        sub.runs[0].font.size = Pt(14)
-        sub.runs[0].font.color.rgb = RGBColor(0x66, 0x66, 0x66)
+        _set_run_font(sub.runs[0], size_pt=12, color=RGBColor(0x66, 0x66, 0x66))
 
-    doc.add_paragraph()
+    doc.add_heading("一、内政", level=1)
 
     if not items:
-        doc.add_paragraph(f"今日（{target_date.isoformat()}）未收录符合口径的在野党相关硬新闻。")
+        doc.add_paragraph(f"今日（{_date_zh(target_date)}）未收录符合口径的在野党相关硬新闻。")
         return doc
 
     for idx, item in enumerate(items, start=1):
         ver = item.verdict
         heading = ver.title_zh.strip() or item.article.title
-        doc.add_heading(f"{idx}. {heading}", level=1)
+        doc.add_heading(heading, level=2)
 
-        for para in ver.summary_zh.strip().split("\n"):
-            if para.strip():
-                doc.add_paragraph(para.strip())
+        summary = " ".join(
+            line.strip() for line in ver.summary_zh.strip().splitlines() if line.strip()
+        ).replace(" ", "")
+        if summary:
+            p = doc.add_paragraph(summary)
+            if p.runs:
+                _set_run_font(p.runs[0], size_pt=12)
 
-        link_p = doc.add_paragraph()
-        link_run = link_p.add_run(item.article.url)
-        link_run.font.color.rgb = RGBColor(0x05, 0x63, 0xC1)
-        link_run.underline = True
+        _add_meta_line(doc, "来源", item.article.source_name)
+        _add_meta_line(doc, "链接", item.article.url, link=True)
 
         if idx < len(items):
-            doc.add_paragraph()
+            spacer = doc.add_paragraph()
+            spacer.paragraph_format.space_after = Pt(6)
 
     # scanned 仅用于日志侧统计，报告正文不再展示元数据
     _ = scanned
